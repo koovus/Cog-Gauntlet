@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "CogGauntlet"
+version = "1.0.0"
+id = "artifacts/coggauntlet"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25122
+
+[services.development]
+run = "pnpm --filter @workspace/coggauntlet run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/coggauntlet", "run", "build" ]
+publicDir = "artifacts/coggauntlet/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25122"
+BASE_PATH = "/"

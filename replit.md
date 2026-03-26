@@ -91,6 +91,34 @@ Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used b
 
 Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
 
+### `artifacts/coggauntlet` (`@workspace/coggauntlet`)
+
+Browser-based dungeon crawler game. Fully client-side, no backend required.
+
+- **Framework**: React + Vite
+- **Renderer**: Three.js (WebGL, OrthographicCamera, top-down)
+- **Aesthetic**: Flat-shaded neon geometry + EdgesGeometry outlines + CSS scanline overlay + Share Tech Mono font
+- **Entry**: `src/main.tsx` → `src/App.tsx`
+
+Key source files:
+- `src/game/types.ts` — All TypeScript interfaces (PlayerData, EnemyState, PartDef, etc.)
+- `src/game/constants.ts` — All tuning values and hex color constants
+- `src/game/dungeon.ts` — BSP dungeon generator + BFS pathfinder
+- `src/game/parts.ts` — 15 part definitions across 4 slot types (core/propulsion/weapon/utility)
+- `src/game/sceneBuilder.ts` — Three.js scene factory: renderer, camera, lights, mesh builders for player/enemy/generator/pickup/projectile/particles
+- `src/hooks/useGame.ts` — Main game hook: full game loop (player input, enemy AI, projectiles, energy system, pickups, particles), syncs HUD state to React at 10Hz
+- `src/components/HUD.tsx` — DOM overlay HUD (status bars, part slots, minimap canvas, event log, bottom bar)
+- `src/App.tsx` — Menu/GameOver screens + canvas mount
+
+Architecture notes:
+- All mutable game state lives in `useRef` (zero re-renders during gameplay)
+- Only `hudState` + `minimapData` use React state, updated at ~10Hz
+- Three.js camera: OrthographicCamera pure top-down (Y=80), `camera.up=(0,0,-1)` so north=-Z is screen-up
+- Dungeon: 50×50 tile grid, TILE_SIZE=2 world units; BSP room placement + L-corridor carving
+- Enemy AI: BFS pathfinding on tile grid, refreshed every ~0.5s per enemy
+- Part auto-equip: walk-over pickup auto-equips if incoming `maxIntegrity > current`
+- Energy system: drains 1.8/s (modified by parts), at 0 core HP drains 8/s → game over
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
