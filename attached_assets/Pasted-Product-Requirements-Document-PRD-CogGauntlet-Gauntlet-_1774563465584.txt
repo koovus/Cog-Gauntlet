@@ -1,0 +1,128 @@
+Product Requirements Document (PRD)
+CogGauntlet
+Gauntlet × Cogmind in Browser-Native 3D
+Version: 1.1 (Three.js Edition)
+Date: March 26, 2026
+Platform: Web (Three.js + WebGL) – playable instantly in browser, distributable via itch.io, Steam (Electron/WebView wrapper), or as PWA.
+Core Vision: Real-time top-down dungeon crawler that fuses the addictive arcade horde chaos of 1985 Atari Gauntlet with the deep modular robot customization and survival tension of Cogmind — all rendered in performant low-poly 3D using Three.js.
+1. Executive Summary
+CogGauntlet lets players control a highly modular sci-fi robot in procedurally generated futuristic complexes. Fight endless mechanical hordes, scavenge and swap destructible parts in real-time, manage fragile energy/core integrity, and survive as long as possible.
+The game runs entirely in the browser with Three.js for the 3D world and HTML/CSS DOM overlays for crisp, responsive UI (best practice for performance: DOM handles static/interactive HUD elements outside the render loop).
+Tagline: “Grab parts. Survive the swarm. Become unstoppable… until your core explodes.”
+Target Price: $14.99 (premium one-time purchase) with free browser demo.
+2. Gameplay Overview
+
+Genre: Real-time top-down co-op dungeon crawler (Gauntlet) + modular roguelike survival (Cogmind).
+Perspective: Orthographic top-down 3D camera with slight angle for depth and readability.
+Core Loop: Explore → scavenge/swap parts → destroy enemy generators → reach exit while energy drains constantly.
+Win/Lose: Reach level exit with core intact (permadeath per run). Endless mode for high scores.
+Length: 40–60 min typical run; high replayability via procedural levels and part variety.
+
+3. Technical Architecture (Three.js-Centric)
+
+Rendering: Three.js WebGLRenderer (antialiased, 60 FPS target on mid-range hardware).
+Camera:THREE.OrthographicCamera locked top-down (positioned high on Y-axis, looking down). Slight 20–30° tilt optional for visual interest. Camera follows player robot smoothly.
+Scene Setup:
+Main scene with low-poly modular robot (THREE.Group containing child meshes for Core, Propulsion, Weapons, Utilities).
+Dynamic lighting (HemisphereLight + pulsing neon directional lights).
+Particle systems for explosions, energy beams, destruction debris.
+
+Robot Modularity:
+Parts are separate GLTF meshes attached as children to the robot Group.
+Swapping: Remove old mesh from parent, add new mesh (with position/rotation offset per slot).
+Destruction: On damage → detach mesh + trigger explosion particles (real-time visual feedback).
+
+UI Layer: Full-screen HTML/CSS overlay (position: absolute; pointer-events: none with interactive elements set to auto). Uses Tailwind or vanilla CSS for responsiveness. Three.js canvas sits behind as background.
+Performance Notes: Keep heavy updates (part health, particles) in the animate loop. Static HUD (score, minimap) uses DOM for zero render-loop cost.
+Controls: Keyboard + Mouse or Gamepad. WASD/move + mouse/analog aim. Radial wheel (CSS) for quick part swaps.
+Assets: Low-poly GLTF models for robots/parts/enemies. Chiptune + synth audio via Web Audio API.
+
+4. Core Mechanics
+4.1 Modular Robot System (Cogmind Depth in 3D)
+
+Slots: Power Core, Propulsion, 1–2 Weapons, 1–2 Utilities.
+Parts have independent integrity; visible damage and detachment when destroyed.
+Real-time swap via walking over salvage or inventory wheel.
+Build variety: Tank, Speed, Hacker, Glass Cannon.
+
+4.2 Combat & Enemies (Gauntlet Energy)
+
+Hold-to-fire weapons with 3D projectiles/beams.
+Enemy generators spawn waves (destroy to stop spawns).
+Constant energy drain (pick up cells or risk core failure).
+Friendly fire off in co-op.
+
+4.3 Levels & Progression
+
+Procedural mazes with doors, secrets, hacking terminals.
+3D environment: neon-lit corridors, scattered salvage, destructible props.
+
+4.4 Multiplayer
+
+1–4 players (local split or online via WebRTC/Photon/Firebase).
+Each player has their own robot with colored outlines.
+
+5. Wireframes & UI Layouts (Three.js + DOM)
+5.1 Main Gameplay Screen
+text[Three.js Canvas – Full Screen Background]
+
+┌──────────────────────────────────────────────────────────────────────┐
+│  MINI-MAP (DOM Canvas or CSS overlay, top-left)                      │
+│                                                                      │
+│                     3D PLAY AREA (Orthographic Camera)               │
+│                     • Modular robot with attachable parts            │
+│                     • Real-time part destruction & particles         │
+│                     • Enemy hordes & generator spawns                │
+│                                                                      │
+│  ROBOT STATUS (DOM icons, top-right)                                 │
+│  [Core HP] [Arm L %] [Legs %] [Weapon %]                             │
+│                                                                      │
+│  QUICK INVENTORY (Bottom-left: CSS hotbar or radial wheel)           │
+│  LOG / VOICE LINES (Bottom-right: scrolling text – “Core failing!”)  │
+│                                                                      │
+│  BOTTOM BAR (fixed DOM): Score • Level • Energy Timer • Wave #       │
+└──────────────────────────────────────────────────────────────────────┘
+Three.js Elements: Player robot Group, enemy meshes, particle emitters, minimap sub-scene (optional separate small renderer).
+5.2 Part Management / Pause Inventory Screen
+
+Background: Dimmed main Three.js scene with slow-rotating robot preview.
+Left: 3D equipped slots (visual GLTF previews).
+Center: Scrollable inventory grid (DOM cards with tiny 3D thumbnails via CSS transforms or offscreen canvases).
+Right: Detailed stats panel (DOM) with condition %, description, and Equip/Repair/Discard buttons.
+Bottom: Matter • Corruption • Heat meters.
+
+5.3 Hacking Terminal Overlay
+
+Semi-transparent CSS modal centered over dimmed Three.js canvas.
+Green terminal-style text with risk warnings.
+Interaction: Raycast from mouse click to terminal object in scene.
+
+5.4 Game Over / Run Summary
+
+Three.js background: Slow orbiting “death cam” on destroyed robot with floating debris and bloom effects.
+Foreground DOM elements: Final score, kill stats, best build 3D preview, “Try Again” / “Share Seed” buttons.
+
+6. Art & Audio Style
+
+Visuals: Low-poly sci-fi with vibrant neon cyan/magenta palette, scanline post-processing, particle-heavy destruction.
+Audio: 8-bit inspired chiptune + synthwave. Voice lines (“Energy critically low!”) via Web Speech or preloaded audio.
+
+7. Scope & Technical Requirements (MVP)
+
+8 robot cores, 100+ parts (as GLTF variants).
+15 enemy types, 10+ level themes.
+Procedural generation (simple grid + room carving).
+Save system: Run seeds + localStorage / cloud high scores.
+Post-launch: Mod support via JSON part definitions + community level editor.
+Browser support: Chrome/Edge/Firefox (WebGL2). Mobile fallback considered later.
+
+8. Monetization & Post-Launch
+
+Premium purchase with free demo (first 5 levels + endless).
+No MTX. Future DLC: New part packs, campaigns, cosmetic skins.
+
+9. Next Steps
+
+Three.js prototype: Basic robot with 4 swappable parts, one enemy type, energy drain, and DOM HUD (1–2 weeks).
+Playtest core loop (movement, swapping, destruction feedback).
+Expand to full level generation and co-op.
