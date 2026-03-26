@@ -197,8 +197,8 @@ export function useGame(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
     let three: ThreeObjects;
     try {
       three = initThree(canvas);
-    } catch (err: any) {
-      setWebglError(err?.message ?? 'WebGL initialization failed');
+    } catch (err: unknown) {
+      setWebglError(err instanceof Error ? err.message : 'WebGL initialization failed');
       return;
     }
     threeRef.current = three;
@@ -236,7 +236,8 @@ export function useGame(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
         three.playerMesh.rotation.y += dt * 0.5;
       }
 
-      three.renderer.render(three.scene, three.camera);
+      three.scanlinePass.uniforms.time.value = g.time;
+      three.composer.render();
 
       // Sync HUD every 100ms
       hudTimerRef.current += dt;
@@ -311,25 +312,44 @@ function advanceWave(
   addLog(`>>> WAVE ${g.wave} INCOMING <<<`);
   g.score += 100;
 
-  // Re-activate all generators with scaled-up stats
-  for (const gen of g.generators) {
-    gen.isActive = true;
-    gen.hp = gen.maxHp * (1 + g.wave * 0.3);
+  // Scale up remaining ACTIVE generators only — destroyed ones stay destroyed
+  const activeGens = g.generators.filter(gen => gen.isActive);
+  for (const gen of activeGens) {
+    gen.hp = Math.ceil(gen.maxHp * 1.3);
     gen.maxHp = gen.hp;
     gen.spawnRate = Math.max(3, gen.spawnRate * 0.85);
-    gen.spawnCooldown = gen.spawnRate;
-
-    // Re-add mesh if missing
-    if (!three.generatorMeshMap.has(gen.id)) {
-      const gm = buildGeneratorMesh(three.scene);
-      const wx = gen.tileX * TILE_SIZE + TILE_SIZE / 2;
-      const wz = gen.tileZ * TILE_SIZE + TILE_SIZE / 2;
-      gm.mesh.position.set(wx, 0, wz);
-      three.generatorMeshMap.set(gen.id, gm);
-    }
-
-    // Initial spawn burst
+    gen.spawnCooldown = gen.spawnRate * 0.3;
     spawnEnemy(gen, three);
+  }
+
+  // Spawn a fresh generator in the first unoccupied room (rooms 1,3,5,7 etc)
+  if (g.dungeon) {
+    const occupiedTiles = new Set(g.generators.map(gen => `${gen.tileX},${gen.tileZ}`));
+    const enemyTypes: Array<GeneratorState['enemyType']> = ['scout', 'heavy', 'swarm', 'turret'];
+    for (let ri = 1; ri < g.dungeon.rooms.length; ri++) {
+      const room = g.dungeon.rooms[ri];
+      const key = `${room.cx},${room.cz}`;
+      if (!occupiedTiles.has(key)) {
+        const newGen: GeneratorState = {
+          id: `gen_w${g.wave}_${ri}`,
+          tileX: room.cx, tileZ: room.cz,
+          hp: 60 + g.wave * 20, maxHp: 60 + g.wave * 20,
+          spawnRate: Math.max(3, 8 - g.wave * 0.5),
+          spawnCooldown: 2,
+          isActive: true,
+          enemyType: enemyTypes[(g.wave + ri) % enemyTypes.length],
+        };
+        g.generators.push(newGen);
+        occupiedTiles.add(key);
+        const gm = buildGeneratorMesh(three.scene);
+        const wx = room.cx * TILE_SIZE + TILE_SIZE / 2;
+        const wz = room.cz * TILE_SIZE + TILE_SIZE / 2;
+        gm.mesh.position.set(wx, 0, wz);
+        three.generatorMeshMap.set(newGen.id, gm);
+        addLog(`NEW SPAWN POINT ONLINE [${room.cx},${room.cz}]`);
+        break;
+      }
+    }
   }
 }
 

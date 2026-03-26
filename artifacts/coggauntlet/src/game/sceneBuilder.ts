@@ -1,11 +1,47 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { DungeonData, PartDef, EnemyType, PickupType } from './types';
 import { TILE_SIZE, WALL_HEIGHT, GRID_W, GRID_H, C, FRUSTUM_H } from './constants';
+
+const ScanlineShader = {
+  uniforms: {
+    tDiffuse: { value: null as THREE.Texture | null },
+    time: { value: 0 },
+    resolution: { value: new THREE.Vector2(1, 1) },
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float time;
+    uniform vec2 resolution;
+    varying vec2 vUv;
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      float lineY = mod(vUv.y * resolution.y, 3.0);
+      float scanline = lineY < 1.5 ? 0.88 : 1.0;
+      color.rgb *= scanline;
+      float vignette = smoothstep(0.9, 0.4, length(vUv - 0.5) * 1.6);
+      color.rgb *= mix(0.55, 1.0, vignette);
+      color.rgb = pow(color.rgb, vec3(0.95));
+      gl_FragColor = color;
+    }
+  `,
+};
 
 export interface ThreeObjects {
   scene: THREE.Scene;
   renderer: THREE.WebGLRenderer;
   camera: THREE.OrthographicCamera;
+  composer: EffectComposer;
+  scanlinePass: ShaderPass;
   playerMesh: THREE.Group;
   playerLight: THREE.PointLight;
   enemyMeshMap: Map<string, THREE.Group>;
@@ -66,10 +102,18 @@ export function initThree(canvas: HTMLCanvasElement): ThreeObjects {
   playerMesh.add(playerLight);
   playerLight.position.set(0, 1, 0);
 
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const scanlinePass = new ShaderPass(ScanlineShader);
+  scanlinePass.uniforms.resolution.value.set(w, h);
+  composer.addPass(scanlinePass);
+
   window.addEventListener('resize', () => {
     const nw = window.innerWidth;
     const nh = window.innerHeight;
     renderer.setSize(nw, nh);
+    composer.setSize(nw, nh);
+    scanlinePass.uniforms.resolution.value.set(nw, nh);
     const na = nw / nh;
     camera.left = -_frustumH * na / 2;
     camera.right = _frustumH * na / 2;
@@ -88,7 +132,7 @@ export function initThree(canvas: HTMLCanvasElement): ThreeObjects {
   }
 
   return {
-    scene, renderer, camera,
+    scene, renderer, camera, composer, scanlinePass,
     playerMesh, playerLight,
     enemyMeshMap: new Map(),
     generatorMeshMap: new Map(),
