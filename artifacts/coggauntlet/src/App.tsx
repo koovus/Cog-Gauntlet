@@ -92,9 +92,24 @@ function GameOverScreen({ hud, onRestart }: { hud: HudState; onRestart: () => vo
             <span style={{ color: '#00ffee', fontSize: 13 }}>{hud.score.toLocaleString()}</span>
             <span style={{ color: '#5544aa', fontSize: 12 }}>KILLS</span>
             <span style={{ color: '#00ffee', fontSize: 13 }}>{hud.killCount}</span>
-            <span style={{ color: '#5544aa', fontSize: 12 }}>WAVE</span>
+            <span style={{ color: '#5544aa', fontSize: 12 }}>WAVE REACHED</span>
             <span style={{ color: '#00ffee', fontSize: 13 }}>{hud.wave}</span>
+            <span style={{ color: '#5544aa', fontSize: 12 }}>PARTS INSTALLED</span>
+            <span style={{ color: '#ff9900', fontSize: 13 }}>{hud.partsEquipped}</span>
           </div>
+          {hud.partsEquipped > 0 && (
+            <div style={{ marginTop: 12, borderTop: '1px solid #2a0066', paddingTop: 10 }}>
+              <div style={{ color: '#888899', fontSize: 11, marginBottom: 6 }}>FINAL LOADOUT</div>
+              {(['core', 'propulsion', 'weapon', 'utility'] as const).map(slot => (
+                hud.parts[slot] ? (
+                  <div key={slot} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <span style={{ color: '#444466', fontSize: 11, textTransform: 'uppercase' }}>{slot}</span>
+                    <span style={{ color: '#aa88ff', fontSize: 11 }}>{hud.parts[slot]!.name}</span>
+                  </div>
+                ) : null
+              ))}
+            </div>
+          )}
         </div>
 
         <button

@@ -136,6 +136,7 @@ export interface GameRef {
   wave: number;
   killCount: number;
   waveTimer: number;
+  partsEquipped: number;
   log: string[];
   logTimer: number;
   time: number;
@@ -150,6 +151,7 @@ export interface HudState {
   score: number;
   wave: number;
   killCount: number;
+  partsEquipped: number;
   parts: EquippedParts;
   log: string[];
   generatorsLeft: number;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
-import { GameRef, HudState, MinimapData, EquippedParts, EnemyState, ProjectileState, GeneratorState } from '../game/types';
+import { GameRef, HudState, MinimapData, EnemyState, ProjectileState, GeneratorState, TileType } from '../game/types';
 import {
   TILE_SIZE, PLAYER_RADIUS, PLAYER_MAX_HP, PLAYER_MAX_ENERGY,
   ENERGY_DRAIN_RATE, CORE_DRAIN_RATE, PICKUP_RADIUS,
@@ -25,7 +25,7 @@ function makeDefaultHud(): HudState {
     phase: 'menu',
     coreHP: PLAYER_MAX_HP, maxCoreHP: PLAYER_MAX_HP,
     energy: PLAYER_MAX_ENERGY, maxEnergy: PLAYER_MAX_ENERGY,
-    score: 0, wave: 1, killCount: 0,
+    score: 0, wave: 1, killCount: 0, partsEquipped: 0,
     parts: { core: null, propulsion: null, weapon: null, utility: null },
     log: ['> SYSTEM ONLINE', '> PRESS START'],
     generatorsLeft: 0,
@@ -44,13 +44,13 @@ function dist2(ax: number, az: number, bx: number, bz: number) {
   return dx * dx + dz * dz;
 }
 
-function canMove(tiles: any, x: number, z: number, r: number): boolean {
+function canMove(tiles: TileType[][], x: number, z: number, r: number): boolean {
   return isFloor(tiles, x + r, z) && isFloor(tiles, x - r, z) &&
     isFloor(tiles, x, z + r) && isFloor(tiles, x, z - r) &&
     isFloor(tiles, x, z);
 }
 
-export function useGame(canvasRef: React.RefObject<HTMLCanvasElement>) {
+export function useGame(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
   const threeRef = useRef<ThreeObjects | null>(null);
   const gameRef = useRef<GameRef>({
     phase: 'menu',
@@ -63,7 +63,7 @@ export function useGame(canvasRef: React.RefObject<HTMLCanvasElement>) {
     },
     enemies: [], generators: [], projectiles: [], particles: [], pickups: [],
     dungeon: null, score: 0, wave: 1, killCount: 0,
-    waveTimer: 0, log: [], logTimer: 0, time: 0,
+    waveTimer: 0, partsEquipped: 0, log: [], logTimer: 0, time: 0,
   });
 
   const keysRef = useRef<Set<string>>(new Set());
@@ -163,6 +163,7 @@ export function useGame(canvasRef: React.RefObject<HTMLCanvasElement>) {
     g.wave = 1;
     g.killCount = 0;
     g.waveTimer = 0;
+    g.partsEquipped = 0;
     g.log = ['> NEW RUN INITIATED', '> CORE ONLINE'];
     g.dungeon = dungeon;
 
@@ -252,6 +253,7 @@ export function useGame(canvasRef: React.RefObject<HTMLCanvasElement>) {
           score: g.score,
           wave: g.wave,
           killCount: g.killCount,
+          partsEquipped: g.partsEquipped,
           parts: { ...p.parts },
           log: [...g.log],
           generatorsLeft: gens.length,
@@ -268,7 +270,7 @@ export function useGame(canvasRef: React.RefObject<HTMLCanvasElement>) {
             tiles: g.dungeon.tiles,
             gridW: g.dungeon.gridW, gridH: g.dungeon.gridH,
             playerTileX: pt.tx, playerTileZ: pt.tz,
-            enemyTiles: g.enemies.filter(e => e.isAlive).map(e => worldToTile(e.x, e.z)),
+            enemyTiles: g.enemies.filter(e => e.isAlive).map(e => { const t = worldToTile(e.x, e.z); return { x: t.tx, z: t.tz }; }),
             generatorTiles: g.generators.map(gen => ({
               x: gen.tileX, z: gen.tileZ, active: gen.isActive,
             })),
@@ -294,6 +296,62 @@ export function useGame(canvasRef: React.RefObject<HTMLCanvasElement>) {
   }, []);
 
   return { hudState, minimapData, startNewRun, webglError };
+}
+
+const WAVE_DURATION = 75; // seconds before forced wave advance
+
+function advanceWave(
+  g: GameRef,
+  three: ThreeObjects,
+  addLog: (msg: string) => void,
+  spawnEnemy: (gen: GeneratorState, three: ThreeObjects) => void,
+) {
+  g.wave++;
+  g.waveTimer = 0;
+  addLog(`>>> WAVE ${g.wave} INCOMING <<<`);
+  g.score += 100;
+
+  // Re-activate all generators with scaled-up stats
+  for (const gen of g.generators) {
+    gen.isActive = true;
+    gen.hp = gen.maxHp * (1 + g.wave * 0.3);
+    gen.maxHp = gen.hp;
+    gen.spawnRate = Math.max(3, gen.spawnRate * 0.85);
+    gen.spawnCooldown = gen.spawnRate;
+
+    // Re-add mesh if missing
+    if (!three.generatorMeshMap.has(gen.id)) {
+      const gm = buildGeneratorMesh(three.scene);
+      const wx = gen.tileX * TILE_SIZE + TILE_SIZE / 2;
+      const wz = gen.tileZ * TILE_SIZE + TILE_SIZE / 2;
+      gm.mesh.position.set(wx, 0, wz);
+      three.generatorMeshMap.set(gen.id, gm);
+    }
+
+    // Initial spawn burst
+    spawnEnemy(gen, three);
+  }
+}
+
+function destroyGenerator(
+  gen: GeneratorState,
+  three: ThreeObjects,
+  g: GameRef,
+  bonus: number,
+  addLog: (msg: string) => void,
+) {
+  gen.isActive = false;
+  const gm = three.generatorMeshMap.get(gen.id);
+  const gx = gen.tileX * TILE_SIZE + TILE_SIZE / 2;
+  const gz = gen.tileZ * TILE_SIZE + TILE_SIZE / 2;
+  if (gm) { three.scene.remove(gm.mesh); three.generatorMeshMap.delete(gen.id); }
+  g.score += bonus;
+  addLog(`GENERATOR OFFLINE +${bonus}pts`);
+  for (let i = 0; i < 20; i++) spawnParticle(three, gx, gz, C.generatorGlow);
+  if (g.generators.every(g2 => !g2.isActive)) {
+    g.score += 500;
+    addLog('ALL GENERATORS OFFLINE! +500pts');
+  }
 }
 
 function tick(
@@ -411,6 +469,7 @@ function tick(
         const current = p.parts[slot];
         if (shouldAutoEquip(current, pk.partDef)) {
           p.parts[slot] = { ...pk.partDef };
+          g.partsEquipped++;
           addLog(`EQUIPPED: ${pk.partDef.name.toUpperCase()}`);
           g.score += 15;
         } else {
@@ -424,6 +483,15 @@ function tick(
       pkMesh.position.y = Math.sin(g.time * 2 + pk.bobOffset) * 0.12;
       pkMesh.rotation.y = g.time * 1.2 + pk.bobOffset;
     }
+  }
+
+  // === WAVE TIMER ===
+  g.waveTimer += dt;
+  if (g.waveTimer >= WAVE_DURATION) {
+    advanceWave(g, three, addLog, spawnEnemy);
+  } else if (g.generators.every(gen => !gen.isActive) && g.generators.length > 0) {
+    // All generators cleared → wave advance immediately
+    advanceWave(g, three, addLog, spawnEnemy);
   }
 
   // === GENERATORS ===
@@ -442,11 +510,15 @@ function tick(
       gm.light.intensity = pulse * 2.5;
     }
 
-    // Check player near generator → destroy on collision
+    // Player walks into generator → instant destruction (high-risk melee)
     const gx = gen.tileX * TILE_SIZE + TILE_SIZE / 2;
     const gz = gen.tileZ * TILE_SIZE + TILE_SIZE / 2;
-    if (dist2(p.x, p.z, gx, gz) < 1.2 * 1.2) {
-      // Player walks into generator = does not auto-destroy; must shoot it
+    if (dist2(p.x, p.z, gx, gz) < 1.0 * 1.0) {
+      // Deal chip damage to player for the risk
+      p.coreHP -= 8;
+      p.hitFlashTime = 0.2;
+      addLog('GENERATOR RAMMED!');
+      destroyGenerator(gen, three, g, 150, addLog);
     }
   }
 
@@ -613,17 +685,7 @@ function tick(
           if (dist2(proj.x, proj.z, gx, gz) < 1.1 * 1.1) {
             gen.hp -= proj.damage;
             if (gen.hp <= 0) {
-              gen.isActive = false;
-              const gm = three.generatorMeshMap.get(gen.id);
-              if (gm) { three.scene.remove(gm.mesh); three.generatorMeshMap.delete(gen.id); }
-              g.score += 200;
-              addLog(`GENERATOR OFFLINE +200pts`);
-              for (let i = 0; i < 20; i++) spawnParticle(three, gx, gz, C.generatorGlow);
-              // Check if all generators dead → wave clear bonus
-              if (g.generators.every(g2 => !g2.isActive)) {
-                g.score += 500;
-                addLog('ALL GENERATORS OFFLINE! +500pts');
-              }
+              destroyGenerator(gen, three, g, 200, addLog);
             }
             remove = true; break;
           }
