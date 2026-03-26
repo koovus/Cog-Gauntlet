@@ -26,11 +26,11 @@ const ScanlineShader = {
     void main() {
       vec4 color = texture2D(tDiffuse, vUv);
       float lineY = mod(vUv.y * resolution.y, 3.0);
-      float scanline = lineY < 1.5 ? 0.88 : 1.0;
+      float scanline = lineY < 1.5 ? 0.93 : 1.0;
       color.rgb *= scanline;
-      float vignette = smoothstep(0.9, 0.4, length(vUv - 0.5) * 1.6);
-      color.rgb *= mix(0.55, 1.0, vignette);
-      color.rgb = pow(color.rgb, vec3(0.95));
+      float vignette = smoothstep(0.9, 0.35, length(vUv - 0.5) * 1.5);
+      color.rgb *= mix(0.72, 1.0, vignette);
+      color.rgb = pow(color.rgb, vec3(0.92));
       gl_FragColor = color;
     }
   `,
@@ -82,23 +82,30 @@ export function initThree(canvas: HTMLCanvasElement): ThreeObjects {
   renderer.setSize(w, h);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(C.background, 40, 90);
+  scene.fog = new THREE.Fog(C.background, 55, 100);
 
-  const hemi = new THREE.HemisphereLight(C.lightAmbient, C.lightGround, 0.4);
+  const hemi = new THREE.HemisphereLight(C.lightAmbient, C.lightGround, 1.8);
   scene.add(hemi);
 
-  const dirCyan = new THREE.DirectionalLight(C.lightCyan, 1.8);
+  const ambient = new THREE.AmbientLight(0x223355, 1.2);
+  scene.add(ambient);
+
+  const dirCyan = new THREE.DirectionalLight(C.lightCyan, 2.5);
   dirCyan.position.set(-10, 20, -10);
   scene.add(dirCyan);
 
-  const dirMag = new THREE.DirectionalLight(C.lightMagenta, 1.4);
+  const dirMag = new THREE.DirectionalLight(C.lightMagenta, 2.0);
   dirMag.position.set(10, 15, 10);
   scene.add(dirMag);
+
+  const fill = new THREE.DirectionalLight(0xffffff, 0.6);
+  fill.position.set(0, 30, 0);
+  scene.add(fill);
 
   const playerMesh = buildPlayerMesh();
   scene.add(playerMesh);
 
-  const playerLight = new THREE.PointLight(C.playerCore, 1.5, 6);
+  const playerLight = new THREE.PointLight(C.playerCore, 3.5, 14);
   playerMesh.add(playerLight);
   playerLight.position.set(0, 1, 0);
 
@@ -174,7 +181,12 @@ export function buildDungeonGeometry(dungeon: DungeonData, three: ThreeObjects) 
   const floorGeo = new THREE.PlaneGeometry(totalW, totalH);
   floorGeo.rotateX(-Math.PI / 2);
   floorGeo.translate(totalW / 2, -0.01, totalH / 2);
-  const floorMesh = new THREE.Mesh(floorGeo, neonMat(C.floor));
+  const floorMat = new THREE.MeshLambertMaterial({
+    color: C.floor,
+    emissive: new THREE.Color(0x0a0a22),
+    emissiveIntensity: 1.0,
+  });
+  const floorMesh = new THREE.Mesh(floorGeo, floorMat);
   three.dungeonGroup.add(floorMesh);
 
   const wallGeo = new THREE.BoxGeometry(TILE_SIZE, WALL_HEIGHT, TILE_SIZE);
@@ -392,6 +404,3 @@ export function getAimPoint(
   return hit ? target : null;
 }
 
-export function updatePartsMeshes(playerMesh: THREE.Group, parts: { weapon: PartDef | null; utility: PartDef | null }) {
-  // weapon child index 2, util child index 3 - just scale to show/hide
-}

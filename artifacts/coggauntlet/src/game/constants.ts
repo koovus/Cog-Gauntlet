@@ -24,9 +24,9 @@ export const FRUSTUM_H = 18;
 
 export const C = {
   background: 0x050508,
-  floor: 0x07070f,
-  wall: 0x0d0020,
-  wallTop: 0x2a0066,
+  floor: 0x0e0e20,
+  wall: 0x1a0040,
+  wallTop: 0x3a0088,
 
   playerCore: 0x00ffee,
   playerPropulsion: 0x00cc88,
@@ -49,8 +49,8 @@ export const C = {
 
   lightCyan: 0x00ccff,
   lightMagenta: 0xff00cc,
-  lightAmbient: 0x030310,
-  lightGround: 0x000000,
+  lightAmbient: 0x2020aa,
+  lightGround: 0x080818,
 } as const;
 
 export const ENEMY_STATS = {

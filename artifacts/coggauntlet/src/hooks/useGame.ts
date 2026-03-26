@@ -423,9 +423,10 @@ function tick(
   if (p.hitFlashTime > 0) {
     p.hitFlashTime -= dt;
     const flash = p.hitFlashTime > 0 ? 0xff0000 : C.playerCore;
-    (three.playerMesh.children[0] as THREE.Mesh).material = new THREE.MeshLambertMaterial({
-      color: flash, emissive: new THREE.Color(flash), emissiveIntensity: 0.4,
-    });
+    const coreMesh = three.playerMesh.children[0] as THREE.Mesh;
+    const mat = coreMesh.material as THREE.MeshLambertMaterial;
+    mat.color.setHex(flash);
+    mat.emissive.setHex(flash);
   }
 
   // Camera follow
