@@ -6,20 +6,23 @@ interface Props {
   minimap: MinimapData;
 }
 
+const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
+
 function BarRow({ label, value, max, color, warn }: { label: string; value: number; max: number; color: string; warn?: boolean }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   const isLow = pct < 25;
+  const barColor = isLow && warn ? '#ff4444' : color;
   return (
-    <div className="mb-1">
-      <div className="flex justify-between text-xs mb-0.5" style={{ color: isLow && warn ? '#ff4444' : '#aaaacc' }}>
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ ...row, color: barColor, fontSize: 11, marginBottom: 2 }}>
         <span>{label}</span>
         <span>{Math.floor(value)}/{max}</span>
       </div>
       <div style={{ background: '#0a0a1a', height: 6, borderRadius: 2, border: '1px solid #2a1a4a' }}>
         <div style={{
-          width: `${pct}%`, height: '100%', background: isLow && warn ? '#ff4444' : color,
+          width: `${pct}%`, height: '100%', background: barColor,
           borderRadius: 2, transition: 'width 0.1s',
-          boxShadow: `0 0 4px ${isLow && warn ? '#ff4444' : color}`,
+          boxShadow: `0 0 4px ${barColor}`,
         }} />
       </div>
     </div>
@@ -28,18 +31,18 @@ function BarRow({ label, value, max, color, warn }: { label: string; value: numb
 
 function PartSlot({ label, name, pct, color }: { label: string; name: string | null; pct: number; color: string }) {
   const isLow = pct < 30 && pct > 0;
+  const nameColor = name ? (isLow ? '#ff4444' : color) : '#333344';
+  const barColor = isLow ? '#ff4444' : color;
   return (
-    <div className="mb-1" style={{ minWidth: 120 }}>
-      <div className="flex justify-between text-xs mb-0.5" style={{ color: '#888899' }}>
+    <div style={{ marginBottom: 5, minWidth: 120 }}>
+      <div style={{ ...row, fontSize: 11, marginBottom: 2 }}>
         <span style={{ color: '#555577' }}>[{label}]</span>
-        <span style={{ color: name ? (isLow ? '#ff4444' : color) : '#333344' }}>
-          {name ? name.toUpperCase() : '---'}
-        </span>
+        <span style={{ color: nameColor }}>{name ? name.toUpperCase() : '---'}</span>
       </div>
       <div style={{ background: '#0a0a1a', height: 4, borderRadius: 2, border: '1px solid #1a1a3a' }}>
         {name && (
           <div style={{
-            width: `${pct}%`, height: '100%', background: isLow ? '#ff4444' : color,
+            width: `${pct}%`, height: '100%', background: barColor,
             borderRadius: 2, boxShadow: `0 0 3px ${color}`,
           }} />
         )}
@@ -83,7 +86,6 @@ function Minimap({ data }: { data: MinimapData }) {
       ctx.fillRect(e.x * SCALE, e.z * SCALE, SCALE, SCALE);
     });
 
-    // Player
     const px = data.playerTileX * SCALE + SCALE / 2;
     const pz = data.playerTileZ * SCALE + SCALE / 2;
     ctx.fillStyle = '#00ffee';
@@ -100,7 +102,7 @@ function Minimap({ data }: { data: MinimapData }) {
       border: '1px solid #2a0066', background: 'rgba(4,4,12,0.85)',
       padding: 4, borderRadius: 2,
     }}>
-      <div className="text-xs mb-1" style={{ color: '#5544aa', fontFamily: 'Share Tech Mono, monospace' }}>
+      <div style={{ color: '#5544aa', fontSize: 11, marginBottom: 4, fontFamily: 'Share Tech Mono, monospace' }}>
         MINIMAP
       </div>
       <canvas ref={canvasRef} width={SIZE} height={SIZE} />
@@ -109,7 +111,7 @@ function Minimap({ data }: { data: MinimapData }) {
 }
 
 export function HUD({ hud, minimap }: Props) {
-  const mono = { fontFamily: "'Share Tech Mono', monospace" };
+  const mono: React.CSSProperties = { fontFamily: "'Share Tech Mono', monospace" };
 
   return (
     <>
@@ -135,12 +137,12 @@ export function HUD({ hud, minimap }: Props) {
         background: 'rgba(4,4,12,0.85)', border: '1px solid #2a0066',
         padding: '10px 14px', borderRadius: 2, minWidth: 180, ...mono,
       }}>
-        <div className="text-xs mb-2" style={{ color: '#5544aa' }}>STATUS</div>
+        <div style={{ color: '#5544aa', fontSize: 11, marginBottom: 8 }}>STATUS</div>
 
         <BarRow label="CORE HP" value={hud.coreHP} max={hud.maxCoreHP} color="#00ffee" warn />
         <BarRow label="ENERGY" value={hud.energy} max={hud.maxEnergy} color="#ffee00" warn />
 
-        <div className="mt-2 mb-1 text-xs" style={{ color: '#5544aa' }}>PARTS</div>
+        <div style={{ color: '#5544aa', fontSize: 11, marginTop: 8, marginBottom: 6 }}>PARTS</div>
         <PartSlot label="CORE" name={hud.parts.core?.name ?? null} pct={hud.partSlotHP.core} color="#00ffee" />
         <PartSlot label="PROP" name={hud.parts.propulsion?.name ?? null} pct={hud.partSlotHP.propulsion} color="#00cc88" />
         <PartSlot label="WEAP" name={hud.parts.weapon?.name ?? null} pct={hud.partSlotHP.weapon} color="#ff6a00" />

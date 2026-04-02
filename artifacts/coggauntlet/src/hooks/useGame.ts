@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { GameRef, HudState, MinimapData, EnemyState, ProjectileState, GeneratorState, TileType } from '../game/types';
 import {
   TILE_SIZE, PLAYER_RADIUS, PLAYER_MAX_HP, PLAYER_MAX_ENERGY,
-  ENERGY_DRAIN_RATE, CORE_DRAIN_RATE, PICKUP_RADIUS,
+  CORE_DRAIN_RATE, PICKUP_RADIUS,
   PROJECTILE_SPEED_PLAYER, PROJECTILE_SPEED_ENEMY, PROJECTILE_RADIUS, PROJECTILE_TTL,
   ENEMY_RADIUS, ENEMY_STATS, C,
 } from '../game/constants';
@@ -16,7 +16,6 @@ import {
 } from '../game/sceneBuilder';
 
 let _eid = 0;
-let _pid = 0;
 
 function uid() { return (_eid++ % 999999).toString(36) + Date.now().toString(36); }
 
@@ -36,8 +35,6 @@ function makeDefaultHud(): HudState {
 function makeDefaultMinimap(): MinimapData {
   return { tiles: null, gridW: 50, gridH: 50, playerTileX: 0, playerTileZ: 0, enemyTiles: [], generatorTiles: [] };
 }
-
-function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
 function dist2(ax: number, az: number, bx: number, bz: number) {
   const dx = bx - ax; const dz = bz - az;

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { DungeonData, PartDef, EnemyType, PickupType } from './types';
+import { DungeonData, EnemyType, PickupType } from './types';
 import { TILE_SIZE, WALL_HEIGHT, GRID_W, GRID_H, C, FRUSTUM_H } from './constants';
 
 const ScanlineShader = {
