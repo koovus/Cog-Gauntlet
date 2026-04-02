@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "PUm3TIApsjtA3dzVqzXUb"
+uri = "file://artifacts/coggauntlet/README.md"
+type = "text"
+title = "CogGauntlet README"
